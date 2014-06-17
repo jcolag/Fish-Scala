@@ -75,12 +75,12 @@ class Player(who: String, out: String => Unit) {
       write(q + "  ")
       try {
         askFor = readInt
-        repeat = false
+        repeat = hand.filter((c: Card) => c.rank == askFor).length == 0
       } catch {
-        case _ => {
-          repeat = true
-          write(again)
-        }
+        case _ => repeat = true
+      }
+      if (repeat) {
+        write(again)
       }
     }
     askFor
