@@ -6,6 +6,15 @@
 import util.Random
 
 /*
+ * Configure game details here.
+ */
+object Global {
+  val maxCard = 13
+  val sizeHand = 6
+  val suits = List("Spades", "Diamonds", "Clubs", "Hearts")
+}
+
+/*
  * Card represents a playing card, of course.
  */
 class Card(v: Int, s: String) {
@@ -44,9 +53,9 @@ class Player(who: String, out: String => Unit, choose: Player => (String, String
    * If so, extract them into a book.
    */
   def extractBooks() = {
-    (1 to maxCard).foreach((i: Int) => {
+    (1 to Global.maxCard).foreach((i: Int) => {
       val possibleBook = hand.filter((c: Card) => c.rank == i)
-      if (possibleBook.length == suits.length) {
+      if (possibleBook.length == Global.suits.length) {
         books ::= i
         hand = hand diff(possibleBook)
       }
@@ -66,128 +75,127 @@ class Player(who: String, out: String => Unit, choose: Player => (String, String
   }
 }
 
-/*
- * join() is just a utility function to print lists cleanly.
- */
-def join[T](list : List[T]) = list match {
-  case xs if xs.size < 3 => xs.mkString(" and ")
-  case xs => xs.init.mkString(", ") + ", and " + xs.last
-}
-
-/*
- * Stub function for output in case we re-target later.
- */
-def output(s: String) = println(s)
-
-/*
- * Stub function to eat output.
- */
-def noOutput(s: String) = 0
-
-/*
- * getChoice() asks for a card rank until it gets a
- * workable answer.
- */
-def getChoice(p: Player)(q: String, again: String): Int = {
-  var repeat = true
-  var askFor = 0
-  while (repeat) {
-    p.write(q + "  ")
-    try {
-      askFor = readInt
-      repeat = p.hand.filter((c: Card) => c.rank == askFor).length == 0
-    } catch {
-      case _ => repeat = true
-    }
-    if (repeat) {
-      p.write(again)
-    }
-  }
-  askFor
-}
-
-/*
- * aiChoice() randomly picks a number of the available cards.
- */
-def aiChoice(p: Player)(q: String, again: String): Int = {
-  var ranks = p.hand.map((c: Card) => c.rank)
-  ranks = ranks.sortWith(_ > _)
-  ranks.foldRight(List.empty[Int]) {
-    case (a, b) =>
-    if (!b.isEmpty && b(0) == a) {
-      b
-    } else {
-      a :: b
-    }
-  }
-  ranks(rand.nextInt(ranks.length))
-}
-
-/*
- * Initialize variables
- */
-var rand = new Random
-val maxCard = 13
-val sizeHand = 6
-val suits = List("Spades", "Diamonds", "Clubs", "Hearts")
-var deck = suits.map((s: String) => (1 to maxCard).map((i: Int) => new Card(i, s))).flatten
-deck = Random.shuffle(deck)
-
-// Boring players, for now.
-var players = List[Player]()
-players ::= new Player("First Player", output, getChoice)
-players ::= new Player("Second Player", noOutput, aiChoice)
-players = Random.shuffle(players)
-
-/*
- * Deal the cards.
- */
-(1 to sizeHand).foreach((i: Int) => {
-  players.foreach((p: Player) => {
-    p.add(deck.head)
-    deck = deck.tail
-  })
-  players = players.tail ::: List(players.head)
-})
-
-/*
- * Play turn by turn.
- */
-var continue = true
-while (continue) {
-  val p = players.head
-  val opponent = players.tail.head
-  output(p.show)
-
-  // Handle card request.
-  val askFor = p.getChoice("Ask for?", "Please try again.")
-  val asked = opponent.ask(askFor, p)
-  if (asked.length == 0) {
-    // Opponent has no cards
-    val cname = if (deck.length > 0) {
-      // Cards remain.
-      val c = deck.head
-      p.add(c)
-      deck = deck.tail
-      c.name
-    } else {
-      // No cards remain.
-      ""
-    }
-    output("Go Fish!  " + cname)
+object GoFish extends App {
+  /*
+   * join() is just a utility function to print lists cleanly.
+   */
+  def join[T](list : List[T]) = list match {
+    case xs if xs.size < 3 => xs.mkString(" and ")
+    case xs => xs.init.mkString(", ") + ", and " + xs.last
   }
 
   /*
-   * Next player, but end if any player is out of cards.
+   * Stub function for output in case we re-target later.
    */
-  players = players.tail ::: List(players.head)
-  players.foreach((p: Player) => continue &= p.hasCards)
-}
+  def output(s: String) = println(s)
 
-/*
- * Print out each player's books.
- */
-players.foreach((p: Player) => {
-  output(p.name + ":  " + join[Int](p.books))
-})
+  /*
+   * Stub function to eat output.
+   */
+  def noOutput(s: String) = 0
+
+  /*
+   * getChoice() asks for a card rank until it gets a
+   * workable answer.
+   */
+  def getChoice(p: Player)(q: String, again: String): Int = {
+    var repeat = true
+    var askFor = 0
+    while (repeat) {
+      p.write(q + "  ")
+      try {
+        askFor = readInt
+        repeat = p.hand.filter((c: Card) => c.rank == askFor).length == 0
+      } catch {
+        case _ => repeat = true
+      }
+      if (repeat) {
+        p.write(again)
+      }
+    }
+    askFor
+  }
+
+  /*
+   * aiChoice() randomly picks a number of the available cards.
+   */
+  def aiChoice(p: Player)(q: String, again: String): Int = {
+    var ranks = p.hand.map((c: Card) => c.rank)
+    ranks = ranks.sortWith(_ > _)
+    ranks.foldRight(List.empty[Int]) {
+      case (a, b) =>
+      if (!b.isEmpty && b(0) == a) {
+        b
+      } else {
+        a :: b
+      }
+    }
+    ranks(rand.nextInt(ranks.length))
+  }
+
+  /*
+   * Initialize variables
+   */
+  var rand = new Random
+  var deck = Global.suits.map((s: String) => (1 to Global.maxCard).map((i: Int) => new Card(i, s))).flatten
+  deck = Random.shuffle(deck)
+
+  // Boring players, for now.
+  var players = List[Player]()
+  players ::= new Player("First Player", output, getChoice)
+  players ::= new Player("Second Player", noOutput, aiChoice)
+  players = Random.shuffle(players)
+
+  /*
+   * Deal the cards.
+   */
+  (1 to Global.sizeHand).foreach((i: Int) => {
+    players.foreach((p: Player) => {
+      p.add(deck.head)
+      deck = deck.tail
+    })
+    players = players.tail ::: List(players.head)
+  })
+
+  /*
+   * Play turn by turn.
+   */
+  var continue = true
+  while (continue) {
+    val p = players.head
+    val opponent = players.tail.head
+    output(p.show)
+
+    // Handle card request.
+    val askFor = p.getChoice("Ask for?", "Please try again.")
+    val asked = opponent.ask(askFor, p)
+    if (asked.length == 0) {
+      // Opponent has no cards
+      val cname = if (deck.length > 0) {
+        // Cards remain.
+        val c = deck.head
+        p.add(c)
+        deck = deck.tail
+        c.name
+      } else {
+        // No cards remain.
+        ""
+      }
+      output("Go Fish!  " + cname)
+    }
+
+    /*
+     * Next player, but end if any player is out of cards.
+     */
+    players = players.tail ::: List(players.head)
+    players.foreach((p: Player) => continue &= p.hasCards)
+  }
+
+  /*
+   * Print out each player's books.
+   */
+  players.foreach((p: Player) => {
+    output(p.name + ":  " + join[Int](p.books))
+  })
+}
 
