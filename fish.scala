@@ -19,9 +19,10 @@ class Card(v: Int, s: String) {
 /*
  * Player keeps track of each player's state.
  */
-class Player(who: String, out: String => Unit) {
+class Player(who: String, out: String => Unit, choose: Player => (String, String) => Int) {
   val name: String = who
   val write: String => Unit = out
+  val getChoice: (String, String) => Int = choose(this)
 
   var hand: List[Card] = List[Card]()
   var books: List[Int] = List[Int]()
@@ -63,28 +64,6 @@ class Player(who: String, out: String => Unit) {
     hand = hand ::: l
     extractBooks
   }
-
-  /*
-   * getChoice() asks for a card rank until it gets a
-   * workable answer.
-   */
-  def getChoice(q: String, again: String): Int = {
-    var repeat = true
-    var askFor = 0
-    while (repeat) {
-      write(q + "  ")
-      try {
-        askFor = readInt
-        repeat = hand.filter((c: Card) => c.rank == askFor).length == 0
-      } catch {
-        case _ => repeat = true
-      }
-      if (repeat) {
-        write(again)
-      }
-    }
-    askFor
-  }
 }
 
 /*
@@ -101,8 +80,53 @@ def join[T](list : List[T]) = list match {
 def output(s: String) = println(s)
 
 /*
+ * Stub function to eat output.
+ */
+def noOutput(s: String) = 0
+
+/*
+ * getChoice() asks for a card rank until it gets a
+ * workable answer.
+ */
+def getChoice(p: Player)(q: String, again: String): Int = {
+  var repeat = true
+  var askFor = 0
+  while (repeat) {
+    p.write(q + "  ")
+    try {
+      askFor = readInt
+      repeat = p.hand.filter((c: Card) => c.rank == askFor).length == 0
+    } catch {
+      case _ => repeat = true
+    }
+    if (repeat) {
+      p.write(again)
+    }
+  }
+  askFor
+}
+
+/*
+ * aiChoice() randomly picks a number of the available cards.
+ */
+def aiChoice(p: Player)(q: String, again: String): Int = {
+  var ranks = p.hand.map((c: Card) => c.rank)
+  ranks = ranks.sortWith(_ > _)
+  ranks.foldRight(List.empty[Int]) {
+    case (a, b) =>
+    if (!b.isEmpty && b(0) == a) {
+      b
+    } else {
+      a :: b
+    }
+  }
+  ranks(rand.nextInt(ranks.length))
+}
+
+/*
  * Initialize variables
  */
+var rand = new Random
 val maxCard = 13
 val sizeHand = 6
 val suits = List("Spades", "Diamonds", "Clubs", "Hearts")
@@ -111,8 +135,8 @@ deck = Random.shuffle(deck)
 
 // Boring players, for now.
 var players = List[Player]()
-players ::= new Player("First Player", output)
-players ::= new Player("Second Player", output)
+players ::= new Player("First Player", output, getChoice)
+players ::= new Player("Second Player", noOutput, aiChoice)
 players = Random.shuffle(players)
 
 /*
