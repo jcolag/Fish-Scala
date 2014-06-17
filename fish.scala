@@ -19,19 +19,31 @@ class Card(v: Int, s: String) {
 /*
  * Player keeps track of each player's state.
  */
-class Player(who: String) {
+class Player(who: String, out: String => Unit) {
   val name: String = who
+  val write: String => Unit = out
+
   var hand: List[Card] = List[Card]()
   var books: List[Int] = List[Int]()
   def show(): String = name + "\n" + hand.map((c: Card) => "\n" + c.name)
   def hasCards(): Boolean = hand.length > 0
-  def ask(i: Int): List[Card] = hand.filter((c: Card) => c.rank == i)
+
+  /*
+   * Ask for cards of a particular rank.
+   */
+  def ask(i: Int, opp: Player): List[Card] = {
+    val give = hand.filter((c: Card) => c.rank == i)
+    opp.add(give)
+    hand = hand diff(give)
+    give
+  }
+
+  /*
+   * See if the player has all the cards of any rank.
+   * If so, extract them into a book.
+   */
   def extractBooks() = {
-    /*
-     * See if the player has all the cards of any rank.
-     * If so, extract them into a book.
-     */
-    (1 until maxCard + 1).foreach((i: Int) => {
+    (1 to maxCard).foreach((i: Int) => {
       val possibleBook = hand.filter((c: Card) => c.rank == i)
       if (possibleBook.length == suits.length) {
         books ::= i
@@ -39,6 +51,10 @@ class Player(who: String) {
       }
     })
   }
+
+  /*
+   * Add cards, both individually and as a list.
+   */
   def add(c: Card) = {
     hand ::= c
     extractBooks
@@ -46,6 +62,28 @@ class Player(who: String) {
   def add(l: List[Card]) = {
     hand = hand ::: l
     extractBooks
+  }
+
+  /*
+   * getChoice() asks for a card rank until it gets a
+   * workable answer.
+   */
+  def getChoice(q: String, again: String): Int = {
+    var repeat = true
+    var askFor = 0
+    while (repeat) {
+      write(q + "  ")
+      try {
+        askFor = readInt
+        repeat = false
+      } catch {
+        case _ => {
+          repeat = true
+          write(again)
+        }
+      }
+    }
+    askFor
   }
 }
 
@@ -57,23 +95,10 @@ def join[T](list : List[T]) = list match {
   case xs => xs.init.mkString(", ") + ", and " + xs.last
 }
 
-def getChoice(q: String): Int = {
-  var repeat = true
-  var askFor = 0
-  while (repeat) {
-    print(q + "  ")
-    try {
-      val askFor = readInt
-      repeat = false
-    } catch {
-      case _ => {
-        repeat = true
-        println("Please try again.")
-      }
-    }
-  }
-  askFor
-}
+/*
+ * Stub function for output in case we re-target later.
+ */
+def output(s: String) = println(s)
 
 /*
  * Initialize variables
@@ -81,19 +106,19 @@ def getChoice(q: String): Int = {
 val maxCard = 13
 val sizeHand = 6
 val suits = List("Spades", "Diamonds", "Clubs", "Hearts")
-var deck = suits.map((s: String) => (1 until maxCard + 1).map((i: Int) => new Card(i, s))).flatten
+var deck = suits.map((s: String) => (1 to maxCard).map((i: Int) => new Card(i, s))).flatten
 deck = Random.shuffle(deck)
 
 // Boring players, for now.
 var players = List[Player]()
-players ::= new Player("First Player")
-players ::= new Player("Second Player")
+players ::= new Player("First Player", output)
+players ::= new Player("Second Player", output)
 players = Random.shuffle(players)
 
 /*
  * Deal the cards.
  */
-(0 until sizeHand).foreach((i: Int) => {
+(1 to sizeHand).foreach((i: Int) => {
   players.foreach((p: Player) => {
     p.add(deck.head)
     deck = deck.tail
@@ -108,28 +133,24 @@ var continue = true
 while (continue) {
   val p = players.head
   val opponent = players.tail.head
-  println(p.show)
+  output(p.show)
 
   // Handle card request.
-//  print("Ask for? ")
-  val askFor = getChoice("Ask for?") // readInt
-  val asked = opponent.ask(askFor)
+  val askFor = p.getChoice("Ask for?", "Please try again.")
+  val asked = opponent.ask(askFor, p)
   if (asked.length == 0) {
     // Opponent has no cards
-    print("Go Fish!  ")
-    if (deck.length > 0) {
+    val cname = if (deck.length > 0) {
       // Cards remain.
-      println(deck.head.name)
-      p.add(deck.head)
+      val c = deck.head
+      p.add(c)
       deck = deck.tail
+      c.name
     } else {
       // No cards remain.
-      println("")
+      ""
     }
-  } else {
-    // Transfer the card(s).
-    opponent.hand = opponent.hand diff(asked)
-    p.add(asked)
+    output("Go Fish!  " + cname)
   }
 
   /*
@@ -143,6 +164,6 @@ while (continue) {
  * Print out each player's books.
  */
 players.foreach((p: Player) => {
-  println(p.name + ":  " + join[Int](p.books))
+  output(p.name + ":  " + join[Int](p.books))
 })
 
