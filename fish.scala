@@ -35,7 +35,7 @@ class Player(who: String, out: String => Unit, choose: Player => (String, String
 
   var hand: List[Card] = List[Card]()
   var books: List[Int] = List[Int]()
-  def show(): String = name + "\n" + hand.map((c: Card) => "\n" + c.name)
+  def show() = write(name + "\n" + hand.map((c: Card) => "\n" + c.name))
   def hasCards(): Boolean = hand.length > 0
 
   /*
@@ -164,7 +164,7 @@ object GoFish extends App {
   while (continue) {
     val p = players.head
     val opponent = players.tail.head
-    output(p.show)
+    p.show
 
     // Handle card request.
     val askFor = p.getChoice("Ask for?", "Please try again.")
